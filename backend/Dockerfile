@@ -34,6 +34,12 @@ COPY backend ./backend
 WORKDIR /app/backend
 # El cliente de Prisma 7 se genera como TypeScript FUENTE dentro de src/,
 # así que tiene que existir ANTES de compilar.
+#
+# `prisma generate` NO se conecta a ninguna base —solo lee el schema— pero
+# nuestro `prisma.config.ts` evalúa `env("DATABASE_URL")` de forma eager y
+# revienta si falta. De ahí esta URL de relleno: existe solo durante el
+# build y jamás se usa. La real llega por entorno en runtime.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
 RUN npx prisma generate
 RUN npm run build
 
