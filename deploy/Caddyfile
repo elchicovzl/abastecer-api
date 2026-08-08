@@ -1,0 +1,36 @@
+# TLS automático con Let's Encrypt.
+#
+# Es obligatorio, no cosmético: Vercel llama a esta API por internet pública
+# con el JWT en el header Authorization. Sin HTTPS ese token viaja en claro
+# y cualquiera en el camino lee la sesión.
+
+{$API_DOMAIN} {
+	encode gzip
+
+	# Cabeceras de seguridad. Baratas de poner, caras de olvidar.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# El health check queda accesible sin ruido en los logs.
+	handle /api/health {
+		reverse_proxy api:3100
+	}
+
+	handle {
+		reverse_proxy api:3100 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

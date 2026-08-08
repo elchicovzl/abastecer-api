@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/prisma/generated/client"
+}
+
+// Prisma 7: la `url` NO va acá — vive en prisma.config.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums — ADR-004: los estados viven como enum de Postgres, no como strings.
+// La base rechaza un valor inválido; un string libre no.
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  WAREHOUSE
+  PURCHASING_MANAGER
+}
+
+enum RequisitionStatus {
+  BORRADOR
+  PENDIENTE_INVENTARIO
+  PENDIENTE_APROBACION_JEFE
+  EN_COMPRA
+  RECIBIDO_EN_BODEGA
+  ENTREGADO
+  RECHAZADA
+}
+
+enum LineType {
+  MATERIAL_OBRA
+  HERRAMIENTA_EQUIPO
+  DOTACION_PERSONAL
+}
+
+enum ItemCategory {
+  MATERIALES
+  EQUIPOS
+  DOTACION
+  CONSUMIBLES
+}
+
+enum PurchaseOrderStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  RECIBIDA_PARCIAL
+  RECIBIDA_TOTAL
+}
+
+// ---------------------------------------------------------------------------
+// Entidades núcleo
+// ---------------------------------------------------------------------------
+
+model Contract {
+  id   String @id @default(uuid())
+  code String @unique
+  name String
+
+  warehouse      Warehouse?
+  users          User[]
+  employees      Employee[]
+  requisitions   Requisition[]
+  purchaseOrders PurchaseOrder[]
+  deliveryLogs   DeliveryLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contracts")
+}
+
+/// Una bodega por contrato. El UNIQUE sobre contractId es lo que hace que
+/// "la bodega del contrato" sea una expresión sin ambigüedad (ADR-002).
+model Warehouse {
+  id         String @id @default(uuid())
+  name       String
+  contractId String @unique
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  stock    Stock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("warehouses")
+}
+
+/// contractId es nullable a propósito: solo el COORDINATOR queda atado a un
+/// contrato. ADMIN, WAREHOUSE y PURCHASING_MANAGER operan sobre los 9.
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String
+  name         String
+  role         Role
+  active       Boolean @default(true)
+  contractId   String?
+
+  contract      Contract?      @relation(fields: [contractId], references: [id])
+  refreshTokens     RefreshToken[]
+  requisitions      Requisition[]
+  approvedOrders    PurchaseOrder[]
+  deliveriesHandled DeliveryLog[]
+  auditLogs         AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId])
+  @@map("users")
+}
+
+/// ADR-001: se persiste el HASH del refresh token, nunca el token en claro.
+/// `revokedAt` es lo que permite revocación REAL — un JWT sin estado solo
+/// se puede esperar a que expire.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+/// Receptor de dotación (ADR-005). El documento es único dentro del contrato,
+/// no globalmente: la misma persona puede figurar en dos obras distintas.
+model Employee {
+  id         String  @id @default(uuid())
+  documentId String
+  name       String
+  position   String?
+  active     Boolean @default(true)
+  contractId String
+
+  contract         Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  requisitionLines RequisitionLine[]
+  deliveryLogs     DeliveryLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([contractId, documentId])
+  @@index([contractId])
+  @@map("employees")
+}
+
+// ---------------------------------------------------------------------------
+// Inventario
+// ---------------------------------------------------------------------------
+
+model Item {
+  id       String       @id @default(uuid())
+  sku      String       @unique
+  name     String
+  category ItemCategory
+  unit     String
+  active   Boolean      @default(true)
+
+  stock              Stock[]
+  requisitionLines   RequisitionLine[]
+  purchaseOrderLines PurchaseOrderLine[]
+  deliveryLogs       DeliveryLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("items")
+}
+
+/// Stock segregado por bodega, o sea por contrato. NUNCA se agrega entre
+/// contratos: "hay 10 unidades" no significa nada sin decir en qué bodega.
+///
+/// Dos constraints la sostienen, y ambos viven en la BASE:
+///   · @@unique([warehouseId, itemId]) — una sola fila por ítem y bodega
+///   · CHECK (quantity >= 0)           — se agrega por SQL en la migración,
+///     porque Prisma no expresa CHECK en el schema. Es la última defensa
+///     del ADR-007 si el lock pesimista llegara a fallar.
+model Stock {
+  id          String @id @default(uuid())
+  warehouseId String
+  itemId      String
+  quantity    Int    @default(0)
+  minQuantity Int    @default(0)
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([warehouseId, itemId])
+  @@index([warehouseId])
+  @@map("stock")
+}
+
+// ---------------------------------------------------------------------------
+// Requisiciones
+// ---------------------------------------------------------------------------
+
+model Requisition {
+  id          String            @id @default(uuid())
+  contractId  String
+  requesterId String
+  status      RequisitionStatus @default(BORRADOR)
+
+  contract  Contract          @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  requester      User              @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  lines          RequisitionLine[]
+  purchaseOrders PurchaseOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId, status])
+  @@index([requesterId])
+  @@map("requisitions")
+}
+
+/// ADR-005: `employeeId` vive en la LÍNEA, no en la cabecera. Una requisición
+/// puede entregar EPP a tres personas distintas; atar el receptor a la
+/// cabecera destruiría justo la trazabilidad que el módulo existe para dar.
+///
+/// Dos CHECK se agregan por SQL en la migración (Prisma no los expresa):
+///   · type = 'DOTACION_PERSONAL' ⟹ employeeId IS NOT NULL
+///   · quantity > 0
+model RequisitionLine {
+  id            String   @id @default(uuid())
+  requisitionId String
+  itemId        String
+  quantity      Int
+  justification String
+  type          LineType
+  employeeId    String?
+
+  requisition Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  item        Item        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  employee    Employee?   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requisitionId])
+  @@index([employeeId])
+  @@map("requisition_lines")
+}
+
+// ---------------------------------------------------------------------------
+// Órdenes de compra, entregas y auditoría
+// ---------------------------------------------------------------------------
+
+/// CHECK por SQL: status = 'RECHAZADA' ⟹ rejectionReason IS NOT NULL.
+/// Un rechazo sin motivo es inauditable — el jefe de compras tiene que
+/// dejar por escrito por qué frenó una compra.
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  contractId      String
+  requisitionId   String
+  status          PurchaseOrderStatus @default(PENDIENTE)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  contract    Contract            @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  requisition Requisition         @relation(fields: [requisitionId], references: [id], onDelete: Restrict)
+  approvedBy  User?               @relation(fields: [approvedById], references: [id])
+  lines       PurchaseOrderLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId, status])
+  @@index([requisitionId])
+  @@map("purchase_orders")
+}
+
+/// ADR-003: `receivedQty` separada de `orderedQty`. El stock se incrementa por
+/// lo EFECTIVAMENTE recibido. Si llegan 8 de 10, la diferencia queda visible
+/// en vez de perderse — y el inventario no miente.
+///
+/// CHECK por SQL: 0 <= receivedQty <= orderedQty, y orderedQty > 0.
+model PurchaseOrderLine {
+  id              String  @id @default(uuid())
+  purchaseOrderId String
+  itemId          String
+  orderedQty      Int
+  receivedQty     Int     @default(0)
+  unitPrice       Decimal @db.Decimal(14, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  item          Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
+}
+
+/// Trazabilidad de dotación: quién recibió qué, cuánto y cuándo.
+/// Es el registro que responde "¿a quién le entregamos las botas en marzo?".
+model DeliveryLog {
+  id            String   @id @default(uuid())
+  contractId    String
+  itemId        String
+  employeeId    String?
+  quantity      Int
+  deliveredById String
+  deliveredAt   DateTime @default(now())
+
+  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  deliveredBy User      @relation(fields: [deliveredById], references: [id], onDelete: Restrict)
+
+  @@index([employeeId])
+  @@index([contractId, deliveredAt])
+  @@map("delivery_logs")
+}
+
+/// ADR-006: lo escribe un Interceptor global, así que ninguna mutación puede
+/// "olvidarse" de auditar. `before`/`after` son JSON para no acoplar la
+/// auditoría al schema de cada entidad.
+model AuditLog {
+  id       String   @id @default(uuid())
+  userId   String?
+  entity   String
+  entityId String
+  action   String
+  before   Json?
+  after    Json?
+  at       DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([userId, at])
+  @@map("audit_logs")
+}

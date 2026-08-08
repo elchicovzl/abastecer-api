@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un solo run por rama: si empujás dos veces seguidas, el anterior se cancela
+# en vez de competir por runners.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Tests · typecheck · lint · E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: asofer
+          POSTGRES_PASSWORD: asofer_test
+          POSTGRES_DB: asofer_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asofer -d asofer_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Los tests de integración y los E2E van SIEMPRE contra esta base.
+      TEST_DATABASE_URL: postgresql://asofer:asofer_test@localhost:5433/asofer_test?schema=public
+      DATABASE_URL: postgresql://asofer:asofer_test@localhost:5433/asofer_test?schema=public
+      # Secretos de juguete, exclusivos de CI. Distintos entre sí porque
+      # `validateEnv` rompe si son iguales — y esa validación también se
+      # verifica al arrancar la app en los tests.
+      JWT_ACCESS_SECRET: ci-access-secret-de-al-menos-32-caracteres-largo
+      JWT_REFRESH_SECRET: ci-refresh-secret-distinto-y-de-32-caracteres
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 7d
+      BCRYPT_ROUNDS: 4 # 12 en producción; acá solo alarga el CI
+      CORS_ORIGIN: http://localhost:3010
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: Aplicar migraciones
+        run: npx prisma migrate deploy
+        working-directory: backend
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests (unit + integración)
+        run: npm test
+
+      - name: Instalar navegador de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E
+        run: npm run test:e2e
+
+      - name: Subir reporte si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -1,0 +1,26 @@
+{
+  "name": "asofer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ASOFER — automatización de compras e inventarios",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker compose up -d && concurrently --kill-others --names \"api,web\" --prefix-colors \"cyan,magenta\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run start:dev --workspace=backend",
+    "dev:web": "npm run dev --workspace=frontend",
+    "stop": "docker compose stop",
+    "test": "npm run test --workspace=backend && npm run test --workspace=frontend",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
+    "typecheck": "npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.2.0",
+    "concurrently": "10.0.4"
+  }
+}

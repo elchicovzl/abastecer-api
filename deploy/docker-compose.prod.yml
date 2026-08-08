@@ -1,0 +1,68 @@
+# Stack de producción del VPS: Postgres + API + Caddy (TLS).
+#
+#   cd /opt/asofer && docker compose -f docker-compose.prod.yml up -d
+#
+# El frontend NO está acá: vive en Vercel.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Los backups salen acá para que `scripts/backup.sh` los levante
+      # desde el host sin entrar al contenedor.
+      - ./backups:/backups
+    # SIN `ports`: Postgres queda en la red interna de Docker, nunca
+    # expuesto a internet. Es la diferencia entre una base privada y una que
+    # cualquiera puede intentar bruteforcear desde el primer minuto.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_TTL: 7d
+      BCRYPT_ROUNDS: 12
+      CORS_ORIGIN: ${FRONTEND_URL}
+    # Tampoco expone puertos al host: solo Caddy la alcanza.
+    expose:
+      - "3100"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      FRONTEND_URL: ${FRONTEND_URL}
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

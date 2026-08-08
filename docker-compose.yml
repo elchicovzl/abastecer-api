@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: asofer-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: asofer
+      POSTGRES_PASSWORD: asofer_dev
+      POSTGRES_DB: asofer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asofer -d asofer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres_test:
+    image: postgres:16-alpine
+    container_name: asofer-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: asofer
+      POSTGRES_PASSWORD: asofer_test
+      POSTGRES_DB: asofer_test
+    # Puerto distinto: los tests de integración truncan tablas entre casos.
+    # Si apuntaran a la base de dev, te borran los datos de trabajo.
+    ports:
+      - "5433:5432"
+    # tmpfs: la base de test vive en RAM. Rápida y se destruye sola.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asofer -d asofer_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_dev:
