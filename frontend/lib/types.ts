@@ -17,6 +17,7 @@ export interface Employee {
   documentId: string;
   name: string;
   position: string | null;
+  contractId?: string;
 }
 
 export interface RequisitionLine {

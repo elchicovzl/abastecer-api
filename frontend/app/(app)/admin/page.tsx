@@ -10,6 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api-client";
+import { getSessionUser } from "@/lib/session";
+
+import { EmployeeManager } from "./employee-manager";
 import type { Employee, Item } from "@/lib/types";
 import type { Role } from "@/lib/permissions";
 
@@ -38,8 +41,12 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 
 export default async function AdminPage() {
+  const sesion = await getSessionUser();
+  const esAdmin = sesion?.role === "ADMIN";
+
   const [users, employees, items, contracts] = await Promise.all([
-    api<AdminUser[]>("/admin/users"),
+    // El coordinador no administra usuarios: el endpoint le da 404.
+    esAdmin ? api<AdminUser[]>("/admin/users") : Promise.resolve([] as AdminUser[]),
     api<Employee[]>("/admin/employees"),
     api<Item[]>("/admin/items"),
     api<Contract[]>("/admin/contracts"),
@@ -100,39 +107,11 @@ export default async function AdminPage() {
         )}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">
-          Empleados ({employees.length})
-        </h2>
-        <Card>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Cargo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-medium">
-                      {e.documentId}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {e.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {e.position ?? "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </section>
+      <EmployeeManager
+        employees={employees}
+        contracts={contracts}
+        puedeElegirContrato={esAdmin}
+      />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Artículos ({items.length})</h2>

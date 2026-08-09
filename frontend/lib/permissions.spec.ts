@@ -19,10 +19,16 @@ describe("canAccessRoute", () => {
     expect(canAccessRoute("COORDINATOR", "/dashboard")).toBe(true);
   });
 
-  it("el COORDINATOR NO entra a bodega, compras ni admin", () => {
+  it("el COORDINATOR NO entra a bodega ni a compras", () => {
     expect(canAccessRoute("COORDINATOR", "/warehouse")).toBe(false);
     expect(canAccessRoute("COORDINATOR", "/purchase-orders")).toBe(false);
-    expect(canAccessRoute("COORDINATOR", "/admin")).toBe(false);
+  });
+
+  it("el COORDINATOR SÍ entra a administración: carga sus empleados", () => {
+    // Conoce a su gente y es quien la necesita en las requisiciones.
+    // Adentro solo ve empleados de SU contrato; usuarios y catálogo siguen
+    // siendo exclusivos del ADMIN, y eso lo hace cumplir el backend.
+    expect(canAccessRoute("COORDINATOR", "/admin")).toBe(true);
   });
 
   it("bodega entra a su pantalla pero no a la de aprobación de compras", () => {
@@ -45,7 +51,11 @@ describe("canAccessRoute", () => {
     expect(canAccessRoute("WAREHOUSE", "/warehouse/receive/abc-123")).toBe(
       true,
     );
+    // El prefijo más largo gana: /admin admite al coordinador, pero
+    // /admin/users es solo del ADMIN.
     expect(canAccessRoute("COORDINATOR", "/admin/users/nuevo")).toBe(false);
+    expect(canAccessRoute("ADMIN", "/admin/users/nuevo")).toBe(true);
+    expect(canAccessRoute("WAREHOUSE", "/purchase-orders/abc")).toBe(false);
   });
 
   it("una ruta NO declarada queda cerrada por defecto", () => {

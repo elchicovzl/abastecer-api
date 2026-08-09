@@ -178,6 +178,102 @@ export async function setMinimumAction(
   return {};
 }
 
+// ── Administración ────────────────────────────────────────────────────
+
+export async function createEmployeeAction(input: {
+  documentId: string;
+  name: string;
+  position?: string;
+  contractId: string;
+}): Promise<ActionState> {
+  try {
+    await api("/admin/employees", { method: "POST", body: input });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/admin");
+  // El selector de dotación del formulario de requisición también se refresca.
+  revalidatePath("/requisitions/new");
+  return {};
+}
+
+export async function setEmployeeActiveAction(
+  id: string,
+  active: boolean,
+): Promise<ActionState> {
+  try {
+    await api(`/admin/employees/${id}/active`, { method: "PATCH", body: { active } });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/admin");
+  revalidatePath("/requisitions/new");
+  return {};
+}
+
+export async function createItemAction(input: {
+  sku: string;
+  name: string;
+  category: string;
+  unit: string;
+}): Promise<ActionState> {
+  try {
+    await api("/admin/items", { method: "POST", body: input });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/admin");
+  revalidatePath("/requisitions/new");
+  revalidatePath("/warehouse");
+  return {};
+}
+
+export async function createUserAction(input: {
+  email: string;
+  name: string;
+  role: string;
+  contractId?: string;
+}): Promise<ActionState & { password?: string }> {
+  try {
+    const res = await api<{ password: string }>("/admin/users", {
+      method: "POST",
+      body: input,
+    });
+    revalidatePath("/admin");
+    // La contraseña se devuelve UNA vez: la base guarda solo el hash.
+    return { password: res.password };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+}
+
+export async function resetPasswordAction(
+  id: string,
+): Promise<ActionState & { password?: string }> {
+  try {
+    const res = await api<{ password: string }>(`/admin/users/${id}/reset-password`, {
+      method: "POST",
+    });
+    revalidatePath("/admin");
+    return { password: res.password };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+}
+
+export async function setUserActiveAction(
+  id: string,
+  active: boolean,
+): Promise<ActionState> {
+  try {
+    await api(`/admin/users/${id}/active`, { method: "PATCH", body: { active } });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/admin");
+  return {};
+}
+
 export async function approveOrderAction(
   id: string,
   lines: { lineId: string; unitPrice: number; orderedQty?: number }[],

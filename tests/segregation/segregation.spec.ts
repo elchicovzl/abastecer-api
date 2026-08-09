@@ -100,8 +100,22 @@ test.describe("segregación entre contratos", () => {
 
     await page.goto("/purchase-orders");
     await expect(page).toHaveURL(/\/requisitions/);
+  });
 
+  test("el coordinador SÍ entra a administración, pero no a usuarios", async ({
+    page,
+  }) => {
+    const login = new LoginPage(page);
+    await login.login(SEED_USERS.coordinatorA!);
+
+    // Entra: necesita cargar los empleados de su contrato para poder crear
+    // requisiciones de dotación.
     await page.goto("/admin");
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.getByText("Empleados").first()).toBeVisible();
+
+    // Pero la gestión de usuarios sigue siendo del ADMIN.
+    await page.goto("/admin/users");
     await expect(page).toHaveURL(/\/requisitions/);
   });
 

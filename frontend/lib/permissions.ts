@@ -22,7 +22,15 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   "/warehouse": ["WAREHOUSE", "ADMIN"],
   "/purchase-orders": ["PURCHASING_MANAGER", "ADMIN"],
   "/dashboard": ["COORDINATOR", "WAREHOUSE", "PURCHASING_MANAGER", "ADMIN"],
-  "/admin": ["ADMIN"],
+  // El COORDINATOR entra para cargar los empleados de SU contrato: conoce a
+  // su gente y es quien la necesita en las requisiciones de dotación.
+  // Adentro solo ve sus empleados — usuarios y catálogo siguen siendo del
+  // ADMIN, y eso lo hace cumplir el BACKEND, no esta tabla.
+  "/admin": ["ADMIN", "COORDINATOR"],
+  // Prefijo MÁS LARGO gana: aunque /admin admita al coordinador, la gestión
+  // de usuarios sigue siendo exclusiva del ADMIN. El backend lo hace cumplir
+  // igual con un 404 — esto solo evita mandarlo a una pantalla que falla.
+  "/admin/users": ["ADMIN"],
 };
 
 /**
