@@ -1,6 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
+import { resolve } from "node:path";
 
 import {
   type ItemCategory,
@@ -67,8 +68,11 @@ async function main(): Promise<void> {
   // `src/` (salvo el cliente generado) y ese import rompía el seed dentro
   // del contenedor. Acá las variables llegan del entorno de Docker; el
   // `.env` solo existe cuando se corre desde una máquina de desarrollo.
+  // `process.cwd()` y NO `import.meta.url`: el tsconfig compila a CommonJS
+  // y `tsc` rechaza import.meta (TS1343). Ya nos había pasado en
+  // `load-env.ts` y lo repetí acá.
   try {
-    process.loadEnvFile(new URL("../.env", import.meta.url).pathname);
+    process.loadEnvFile(resolve(process.cwd(), ".env"));
   } catch {
     // Sin .env: se asume que las variables ya están en el entorno.
   }
