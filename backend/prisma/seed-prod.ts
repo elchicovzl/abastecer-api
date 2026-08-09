@@ -2,7 +2,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
 
-import { loadEnvFileIfPresent } from "../src/config/load-env";
 import {
   type ItemCategory,
   PrismaClient,
@@ -64,7 +63,15 @@ function generarPassword(): string {
 }
 
 async function main(): Promise<void> {
-  loadEnvFileIfPresent();
+  // Sin dependencia de `src/config/load-env`: la imagen de runtime no copia
+  // `src/` (salvo el cliente generado) y ese import rompía el seed dentro
+  // del contenedor. Acá las variables llegan del entorno de Docker; el
+  // `.env` solo existe cuando se corre desde una máquina de desarrollo.
+  try {
+    process.loadEnvFile(new URL("../.env", import.meta.url).pathname);
+  } catch {
+    // Sin .env: se asume que las variables ya están en el entorno.
+  }
 
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL no está definida");
