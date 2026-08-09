@@ -143,6 +143,41 @@ export async function deliverRequisitionAction(id: string): Promise<ActionState>
   return {};
 }
 
+export async function adjustStockAction(
+  warehouseId: string,
+  itemId: string,
+  quantity: number,
+  reason: string,
+): Promise<ActionState> {
+  try {
+    await api(`/inventory/${warehouseId}/adjust`, {
+      method: "POST",
+      body: { itemId, quantity, reason },
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/warehouse");
+  return {};
+}
+
+export async function setMinimumAction(
+  warehouseId: string,
+  itemId: string,
+  minQuantity: number,
+): Promise<ActionState> {
+  try {
+    await api(`/inventory/${warehouseId}/minimum`, {
+      method: "POST",
+      body: { itemId, minQuantity },
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Error inesperado" };
+  }
+  revalidatePath("/warehouse");
+  return {};
+}
+
 export async function approveOrderAction(
   id: string,
   lines: { lineId: string; unitPrice: number; orderedQty?: number }[],

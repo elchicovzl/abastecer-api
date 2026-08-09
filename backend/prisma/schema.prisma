@@ -243,6 +243,14 @@ model RequisitionLine {
   type          LineType
   employeeId    String?
 
+  /// Cuánto salió de bodega durante la verificación de stock.
+  ///
+  /// Sin este dato la entrega final no puede saber cuánto FALTA sacar, y
+  /// terminaba descontando todo lo comprado. Caso real: se pidió 1 casco,
+  /// compras compró 5 por precio de volumen, y al entregar desaparecieron
+  /// las 5 en vez de salir 1 y quedar 4.
+  dispatchedQty Int      @default(0)
+
   requisition Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
   item        Item        @relation(fields: [itemId], references: [id], onDelete: Restrict)
   employee    Employee?   @relation(fields: [employeeId], references: [id], onDelete: Restrict)

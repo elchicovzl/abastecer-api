@@ -18,7 +18,7 @@ export class RequisitionsService {
   async list(user: AuthenticatedUser) {
     return this.prisma.requisition.findMany({
       where: contractScopeWhere(user),
-      include: { lines: true },
+      include: { lines: { include: { item: true } } },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -27,7 +27,12 @@ export class RequisitionsService {
   async detail(user: AuthenticatedUser, id: string) {
     const requisition = await this.prisma.requisition.findUnique({
       where: { id },
-      include: { lines: true, purchaseOrders: { include: { lines: true } } },
+      include: {
+        // Sin el `item` la UI cae al fallback y muestra el UUID crudo en vez
+        // del nombre del artículo.
+        lines: { include: { item: true } },
+        purchaseOrders: { include: { lines: true } },
+      },
     });
     assertContractAccess(user, requisition);
     return requisition;
@@ -96,11 +101,15 @@ export class RequisitionsService {
    * compra. Esa separación es la que da la trazabilidad del ADR-005: alguien
    * retira el material en un momento concreto, y eso queda registrado.
    *
-   * OJO con el descuento de stock. En `verifyStock` ya se descontó lo que
-   * había en bodega; lo comprado entró después con `receive()`. Acá se
-   * descuenta ÚNICAMENTE la porción comprada — descontar la cantidad total
-   * sería contar la misma salida dos veces y dejar el inventario en falso
-   * negativo.
+   * OJO con el descuento de stock, que es donde estuvo el bug.
+   *
+   * En `verifyStock` ya salió `dispatchedQty` de bodega. Acá sale SOLO lo
+   * que falta: `quantity - dispatchedQty`. Todo lo comprado por encima de
+   * eso QUEDA en bodega, disponible para la próxima requisición.
+   *
+   * Antes se descontaba lo comprado, y eso hacía desaparecer unidades:
+   * el coordinador pedía 1 casco, compras compraba 5 por precio de volumen,
+   * y al entregar el sistema sacaba las 5. Las otras 4 se evaporaban.
    */
   async deliver(user: AuthenticatedUser, id: string) {
     if (user.role !== "WAREHOUSE" && user.role !== "ADMIN") {
@@ -122,22 +131,13 @@ export class RequisitionsService {
       throw new NotFoundException("El contrato no tiene bodega asignada");
     }
 
-    // Cuánto de cada ítem vino de la compra (lo que hoy está en bodega).
-    const compradoPorItem = new Map<string, number>();
-    for (const po of requisition.purchaseOrders) {
-      for (const l of po.lines) {
-        compradoPorItem.set(
-          l.itemId,
-          (compradoPorItem.get(l.itemId) ?? 0) + l.receivedQty,
-        );
-      }
-    }
-
     return this.prisma.$transaction(async (tx) => {
       for (const line of requisition.lines) {
-        const comprado = compradoPorItem.get(line.itemId) ?? 0;
+        // Lo que TODAVÍA tiene que salir de bodega: lo pedido menos lo que
+        // ya salió en la verificación.
+        const porSalir = line.quantity - line.dispatchedQty;
 
-        if (comprado > 0) {
+        if (porSalir > 0) {
           // Mismo lock pesimista del ADR-007: la entrega es una salida de
           // stock como cualquier otra.
           const locked = await tx.$queryRaw<{ id: string; quantity: number }[]>`
@@ -146,15 +146,15 @@ export class RequisitionsService {
             FOR UPDATE
           `;
           const row = locked[0];
-          if (!row || row.quantity < comprado) {
+          if (!row || row.quantity < porSalir) {
             throw new BadRequestException(
               `Stock insuficiente para entregar: hay ${row?.quantity ?? 0}, ` +
-                `se necesitan ${comprado}`,
+                `se necesitan ${porSalir}`,
             );
           }
           await tx.stock.update({
             where: { id: row.id },
-            data: { quantity: { decrement: comprado } },
+            data: { quantity: { decrement: porSalir } },
           });
         }
 
@@ -223,6 +223,14 @@ export class RequisitionsService {
             data: { quantity: { decrement: dispatched } },
           });
         }
+
+        // Se PERSISTE cuánto salió de bodega acá. La entrega final lo
+        // necesita para calcular cuánto falta sacar; sin este dato terminaba
+        // descontando todo lo comprado.
+        await tx.requisitionLine.update({
+          where: { id: line.id },
+          data: { dispatchedQty: dispatched },
+        });
 
         if (missing > 0) shortfalls.push({ itemId: line.itemId, missing });
         else linesFullyCovered++;

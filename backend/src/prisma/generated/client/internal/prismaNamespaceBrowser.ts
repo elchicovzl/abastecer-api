@@ -192,6 +192,7 @@ export const RequisitionLineScalarFieldEnum = {
   justification: 'justification',
   type: 'type',
   employeeId: 'employeeId',
+  dispatchedQty: 'dispatchedQty',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

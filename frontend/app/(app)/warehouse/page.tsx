@@ -11,6 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api-client";
+
+import { InventoryTable } from "./inventory-table";
 import { formatDate } from "@/lib/format";
 import type { PurchaseOrder, Requisition, StockRow } from "@/lib/types";
 
@@ -23,10 +25,11 @@ import {
 export const metadata = { title: "Bodega — ASOFER" };
 
 export default async function WarehousePage() {
-  const [requisitions, orders, lowStock] = await Promise.all([
+  const [requisitions, orders, lowStock, inventory] = await Promise.all([
     api<Requisition[]>("/requisitions"),
     api<PurchaseOrder[]>("/purchase-orders"),
     api<StockRow[]>("/reports/low-stock"),
+    api<StockRow[]>("/inventory"),
   ]);
 
   const porVerificar = requisitions.filter(
@@ -44,8 +47,22 @@ export default async function WarehousePage() {
     <>
       <PageHeader
         title="Bodega"
-        description="Verificación de stock y recepción de compras"
+        description="Inventario, verificación de stock y recepción de compras"
       />
+
+      {/* El inventario va PRIMERO: es la pregunta que bodega se hace todos
+          los días. Antes esta pantalla no lo mostraba — una bodega sin
+          bodega. */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold">
+          Inventario ({inventory.length} artículos)
+        </h2>
+        <Card>
+          <CardContent>
+            <InventoryTable rows={inventory} />
+          </CardContent>
+        </Card>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">

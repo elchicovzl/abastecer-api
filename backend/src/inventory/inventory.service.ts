@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 
 import type { AuthenticatedUser } from "../auth/auth.types";
 import { canAccessContract } from "../auth/contract-scope";
@@ -189,6 +194,128 @@ export class InventoryService {
 
       return { quantity: row.quantity };
     });
+  }
+
+  /**
+   * Ajuste manual de stock: fija la cantidad a un valor absoluto.
+   *
+   * Es la puerta de entrada que faltaba. Antes el stock SOLO podía crecer
+   * por una orden de compra, así que ASOFER no tenía forma de cargar el
+   * inventario que ya tiene en bodega.
+   *
+   * Cubre tres casos reales:
+   *  · Carga inicial por conteo físico
+   *  · Merma, rotura o vencimiento
+   *  · Corrección de un error de conteo
+   *
+   * El `reason` es OBLIGATORIO. Un ajuste de inventario sin explicación es
+   * indistinguible de un faltante: alguien tiene que poder mirar el
+   * histórico y entender por qué el número cambió. Queda auditado por el
+   * interceptor global (ADR-006).
+   */
+  async adjust(
+    user: AuthenticatedUser,
+    input: { warehouseId: string; itemId: string; quantity: number; reason: string },
+  ): Promise<{ warehouseId: string; itemId: string; quantity: number; previous: number }> {
+    if (user.role !== "WAREHOUSE" && user.role !== "ADMIN") {
+      throw new ForbiddenException("Solo bodega puede ajustar el inventario");
+    }
+    if (!Number.isInteger(input.quantity) || input.quantity < 0) {
+      throw new BadRequestException("La cantidad debe ser un entero mayor o igual a cero");
+    }
+    if (!input.reason || input.reason.trim().length < 5) {
+      throw new BadRequestException(
+        "El ajuste debe indicar un motivo de al menos 5 caracteres",
+      );
+    }
+
+    await this.assertWarehouseAccess(user, input.warehouseId);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Mismo lock del ADR-007: un ajuste concurrente con un despacho no
+      // puede pisarse.
+      const locked = await tx.$queryRaw<{ id: string; quantity: number }[]>`
+        SELECT "id", "quantity" FROM "stock"
+        WHERE "warehouseId" = ${input.warehouseId} AND "itemId" = ${input.itemId}
+        FOR UPDATE
+      `;
+      const previous = locked[0]?.quantity ?? 0;
+
+      const row = await tx.stock.upsert({
+        where: {
+          warehouseId_itemId: { warehouseId: input.warehouseId, itemId: input.itemId },
+        },
+        update: { quantity: input.quantity },
+        create: {
+          warehouseId: input.warehouseId,
+          itemId: input.itemId,
+          quantity: input.quantity,
+        },
+        select: { quantity: true },
+      });
+
+      return {
+        warehouseId: input.warehouseId,
+        itemId: input.itemId,
+        quantity: row.quantity,
+        previous,
+      };
+    });
+  }
+
+  /**
+   * Define el mínimo de un artículo en una bodega.
+   *
+   * Sin esto las alertas eran letra muerta: `minQuantity` arranca en 0 y la
+   * condición es `quantity < minQuantity`. Como un CHECK impide stock
+   * negativo, la alerta era matemáticamente imposible de disparar.
+   */
+  async setMinimum(
+    user: AuthenticatedUser,
+    input: { warehouseId: string; itemId: string; minQuantity: number },
+  ): Promise<{ warehouseId: string; itemId: string; minQuantity: number }> {
+    if (user.role !== "WAREHOUSE" && user.role !== "ADMIN") {
+      throw new ForbiddenException("Solo bodega puede definir mínimos");
+    }
+    if (!Number.isInteger(input.minQuantity) || input.minQuantity < 0) {
+      throw new BadRequestException("El mínimo debe ser un entero mayor o igual a cero");
+    }
+
+    await this.assertWarehouseAccess(user, input.warehouseId);
+
+    const row = await this.prisma.stock.upsert({
+      where: {
+        warehouseId_itemId: { warehouseId: input.warehouseId, itemId: input.itemId },
+      },
+      update: { minQuantity: input.minQuantity },
+      create: {
+        warehouseId: input.warehouseId,
+        itemId: input.itemId,
+        quantity: 0,
+        minQuantity: input.minQuantity,
+      },
+      select: { minQuantity: true },
+    });
+
+    return {
+      warehouseId: input.warehouseId,
+      itemId: input.itemId,
+      minQuantity: row.minQuantity,
+    };
+  }
+
+  /** 404 y no 403 si la bodega es de otro contrato (ADR-008). */
+  private async assertWarehouseAccess(
+    user: AuthenticatedUser,
+    warehouseId: string,
+  ): Promise<void> {
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: warehouseId },
+      select: { contractId: true },
+    });
+    if (!warehouse || !canAccessContract(user, warehouse.contractId)) {
+      throw new NotFoundException("Recurso no encontrado");
+    }
   }
 
   /** Valida que la categoría de gasto exista antes de registrar movimientos. */

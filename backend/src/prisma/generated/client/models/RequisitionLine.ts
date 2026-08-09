@@ -34,10 +34,12 @@ export type AggregateRequisitionLine = {
 
 export type RequisitionLineAvgAggregateOutputType = {
   quantity: number | null
+  dispatchedQty: number | null
 }
 
 export type RequisitionLineSumAggregateOutputType = {
   quantity: number | null
+  dispatchedQty: number | null
 }
 
 export type RequisitionLineMinAggregateOutputType = {
@@ -48,6 +50,7 @@ export type RequisitionLineMinAggregateOutputType = {
   justification: string | null
   type: $Enums.LineType | null
   employeeId: string | null
+  dispatchedQty: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +63,7 @@ export type RequisitionLineMaxAggregateOutputType = {
   justification: string | null
   type: $Enums.LineType | null
   employeeId: string | null
+  dispatchedQty: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -72,6 +76,7 @@ export type RequisitionLineCountAggregateOutputType = {
   justification: number
   type: number
   employeeId: number
+  dispatchedQty: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -80,10 +85,12 @@ export type RequisitionLineCountAggregateOutputType = {
 
 export type RequisitionLineAvgAggregateInputType = {
   quantity?: true
+  dispatchedQty?: true
 }
 
 export type RequisitionLineSumAggregateInputType = {
   quantity?: true
+  dispatchedQty?: true
 }
 
 export type RequisitionLineMinAggregateInputType = {
@@ -94,6 +101,7 @@ export type RequisitionLineMinAggregateInputType = {
   justification?: true
   type?: true
   employeeId?: true
+  dispatchedQty?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -106,6 +114,7 @@ export type RequisitionLineMaxAggregateInputType = {
   justification?: true
   type?: true
   employeeId?: true
+  dispatchedQty?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -118,6 +127,7 @@ export type RequisitionLineCountAggregateInputType = {
   justification?: true
   type?: true
   employeeId?: true
+  dispatchedQty?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -217,6 +227,7 @@ export type RequisitionLineGroupByOutputType = {
   justification: string
   type: $Enums.LineType
   employeeId: string | null
+  dispatchedQty: number
   createdAt: Date
   updatedAt: Date
   _count: RequisitionLineCountAggregateOutputType | null
@@ -252,6 +263,7 @@ export type RequisitionLineWhereInput = {
   justification?: Prisma.StringFilter<"RequisitionLine"> | string
   type?: Prisma.EnumLineTypeFilter<"RequisitionLine"> | $Enums.LineType
   employeeId?: Prisma.StringNullableFilter<"RequisitionLine"> | string | null
+  dispatchedQty?: Prisma.IntFilter<"RequisitionLine"> | number
   createdAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
   requisition?: Prisma.XOR<Prisma.RequisitionScalarRelationFilter, Prisma.RequisitionWhereInput>
@@ -267,6 +279,7 @@ export type RequisitionLineOrderByWithRelationInput = {
   justification?: Prisma.SortOrder
   type?: Prisma.SortOrder
   employeeId?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   requisition?: Prisma.RequisitionOrderByWithRelationInput
@@ -285,6 +298,7 @@ export type RequisitionLineWhereUniqueInput = Prisma.AtLeast<{
   justification?: Prisma.StringFilter<"RequisitionLine"> | string
   type?: Prisma.EnumLineTypeFilter<"RequisitionLine"> | $Enums.LineType
   employeeId?: Prisma.StringNullableFilter<"RequisitionLine"> | string | null
+  dispatchedQty?: Prisma.IntFilter<"RequisitionLine"> | number
   createdAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
   requisition?: Prisma.XOR<Prisma.RequisitionScalarRelationFilter, Prisma.RequisitionWhereInput>
@@ -300,6 +314,7 @@ export type RequisitionLineOrderByWithAggregationInput = {
   justification?: Prisma.SortOrder
   type?: Prisma.SortOrder
   employeeId?: Prisma.SortOrderInput | Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.RequisitionLineCountOrderByAggregateInput
@@ -320,6 +335,7 @@ export type RequisitionLineScalarWhereWithAggregatesInput = {
   justification?: Prisma.StringWithAggregatesFilter<"RequisitionLine"> | string
   type?: Prisma.EnumLineTypeWithAggregatesFilter<"RequisitionLine"> | $Enums.LineType
   employeeId?: Prisma.StringNullableWithAggregatesFilter<"RequisitionLine"> | string | null
+  dispatchedQty?: Prisma.IntWithAggregatesFilter<"RequisitionLine"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"RequisitionLine"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"RequisitionLine"> | Date | string
 }
@@ -329,6 +345,7 @@ export type RequisitionLineCreateInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   requisition: Prisma.RequisitionCreateNestedOneWithoutLinesInput
@@ -344,6 +361,7 @@ export type RequisitionLineUncheckedCreateInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -353,6 +371,7 @@ export type RequisitionLineUpdateInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   requisition?: Prisma.RequisitionUpdateOneRequiredWithoutLinesNestedInput
@@ -368,6 +387,7 @@ export type RequisitionLineUncheckedUpdateInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -380,6 +400,7 @@ export type RequisitionLineCreateManyInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -389,6 +410,7 @@ export type RequisitionLineUpdateManyMutationInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -401,6 +423,7 @@ export type RequisitionLineUncheckedUpdateManyInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -423,12 +446,14 @@ export type RequisitionLineCountOrderByAggregateInput = {
   justification?: Prisma.SortOrder
   type?: Prisma.SortOrder
   employeeId?: Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type RequisitionLineAvgOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
 }
 
 export type RequisitionLineMaxOrderByAggregateInput = {
@@ -439,6 +464,7 @@ export type RequisitionLineMaxOrderByAggregateInput = {
   justification?: Prisma.SortOrder
   type?: Prisma.SortOrder
   employeeId?: Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -451,12 +477,14 @@ export type RequisitionLineMinOrderByAggregateInput = {
   justification?: Prisma.SortOrder
   type?: Prisma.SortOrder
   employeeId?: Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type RequisitionLineSumOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
+  dispatchedQty?: Prisma.SortOrder
 }
 
 export type RequisitionLineCreateNestedManyWithoutEmployeeInput = {
@@ -594,6 +622,7 @@ export type RequisitionLineCreateWithoutEmployeeInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   requisition: Prisma.RequisitionCreateNestedOneWithoutLinesInput
@@ -607,6 +636,7 @@ export type RequisitionLineUncheckedCreateWithoutEmployeeInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -648,6 +678,7 @@ export type RequisitionLineScalarWhereInput = {
   justification?: Prisma.StringFilter<"RequisitionLine"> | string
   type?: Prisma.EnumLineTypeFilter<"RequisitionLine"> | $Enums.LineType
   employeeId?: Prisma.StringNullableFilter<"RequisitionLine"> | string | null
+  dispatchedQty?: Prisma.IntFilter<"RequisitionLine"> | number
   createdAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"RequisitionLine"> | Date | string
 }
@@ -657,6 +688,7 @@ export type RequisitionLineCreateWithoutItemInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   requisition: Prisma.RequisitionCreateNestedOneWithoutLinesInput
@@ -670,6 +702,7 @@ export type RequisitionLineUncheckedCreateWithoutItemInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -705,6 +738,7 @@ export type RequisitionLineCreateWithoutRequisitionInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   item: Prisma.ItemCreateNestedOneWithoutRequisitionLinesInput
@@ -718,6 +752,7 @@ export type RequisitionLineUncheckedCreateWithoutRequisitionInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -755,6 +790,7 @@ export type RequisitionLineCreateManyEmployeeInput = {
   quantity: number
   justification: string
   type: $Enums.LineType
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -764,6 +800,7 @@ export type RequisitionLineUpdateWithoutEmployeeInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   requisition?: Prisma.RequisitionUpdateOneRequiredWithoutLinesNestedInput
@@ -777,6 +814,7 @@ export type RequisitionLineUncheckedUpdateWithoutEmployeeInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -788,6 +826,7 @@ export type RequisitionLineUncheckedUpdateManyWithoutEmployeeInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -799,6 +838,7 @@ export type RequisitionLineCreateManyItemInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -808,6 +848,7 @@ export type RequisitionLineUpdateWithoutItemInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   requisition?: Prisma.RequisitionUpdateOneRequiredWithoutLinesNestedInput
@@ -821,6 +862,7 @@ export type RequisitionLineUncheckedUpdateWithoutItemInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -832,6 +874,7 @@ export type RequisitionLineUncheckedUpdateManyWithoutItemInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -843,6 +886,7 @@ export type RequisitionLineCreateManyRequisitionInput = {
   justification: string
   type: $Enums.LineType
   employeeId?: string | null
+  dispatchedQty?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -852,6 +896,7 @@ export type RequisitionLineUpdateWithoutRequisitionInput = {
   quantity?: Prisma.IntFieldUpdateOperationsInput | number
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   item?: Prisma.ItemUpdateOneRequiredWithoutRequisitionLinesNestedInput
@@ -865,6 +910,7 @@ export type RequisitionLineUncheckedUpdateWithoutRequisitionInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -876,6 +922,7 @@ export type RequisitionLineUncheckedUpdateManyWithoutRequisitionInput = {
   justification?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumLineTypeFieldUpdateOperationsInput | $Enums.LineType
   employeeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dispatchedQty?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -890,6 +937,7 @@ export type RequisitionLineSelect<ExtArgs extends runtime.Types.Extensions.Inter
   justification?: boolean
   type?: boolean
   employeeId?: boolean
+  dispatchedQty?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   requisition?: boolean | Prisma.RequisitionDefaultArgs<ExtArgs>
@@ -905,6 +953,7 @@ export type RequisitionLineSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   justification?: boolean
   type?: boolean
   employeeId?: boolean
+  dispatchedQty?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   requisition?: boolean | Prisma.RequisitionDefaultArgs<ExtArgs>
@@ -920,6 +969,7 @@ export type RequisitionLineSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   justification?: boolean
   type?: boolean
   employeeId?: boolean
+  dispatchedQty?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   requisition?: boolean | Prisma.RequisitionDefaultArgs<ExtArgs>
@@ -935,11 +985,12 @@ export type RequisitionLineSelectScalar = {
   justification?: boolean
   type?: boolean
   employeeId?: boolean
+  dispatchedQty?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RequisitionLineOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requisitionId" | "itemId" | "quantity" | "justification" | "type" | "employeeId" | "createdAt" | "updatedAt", ExtArgs["result"]["requisitionLine"]>
+export type RequisitionLineOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requisitionId" | "itemId" | "quantity" | "justification" | "type" | "employeeId" | "dispatchedQty" | "createdAt" | "updatedAt", ExtArgs["result"]["requisitionLine"]>
 export type RequisitionLineInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   requisition?: boolean | Prisma.RequisitionDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
@@ -971,6 +1022,15 @@ export type $RequisitionLinePayload<ExtArgs extends runtime.Types.Extensions.Int
     justification: string
     type: $Enums.LineType
     employeeId: string | null
+    /**
+     * Cuánto salió de bodega durante la verificación de stock.
+     * 
+     * Sin este dato la entrega final no puede saber cuánto FALTA sacar, y
+     * terminaba descontando todo lo comprado. Caso real: se pidió 1 casco,
+     * compras compró 5 por precio de volumen, y al entregar desaparecieron
+     * las 5 en vez de salir 1 y quedar 4.
+     */
+    dispatchedQty: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["requisitionLine"]>
@@ -1406,6 +1466,7 @@ export interface RequisitionLineFieldRefs {
   readonly justification: Prisma.FieldRef<"RequisitionLine", 'String'>
   readonly type: Prisma.FieldRef<"RequisitionLine", 'LineType'>
   readonly employeeId: Prisma.FieldRef<"RequisitionLine", 'String'>
+  readonly dispatchedQty: Prisma.FieldRef<"RequisitionLine", 'Int'>
   readonly createdAt: Prisma.FieldRef<"RequisitionLine", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"RequisitionLine", 'DateTime'>
 }
